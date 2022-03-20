@@ -1,7 +1,10 @@
 using System;
+using System.Configuration;
 using Microsoft.VisualStudio.TestTools.UnitTesting;
 using OpenQA.Selenium;
 using OpenQA.Selenium.Chrome;
+using OpenQA.Selenium.Edge;
+using OpenQA.Selenium.Firefox;
 using OpenQA.Selenium.Support.UI;
 
 namespace MeteoTests
@@ -14,10 +17,41 @@ namespace MeteoTests
 
         By linkDiagramByText = By.LinkText("Skew-T log-P diagram");
 
+        Configuration appConfig = ConfigurationManager.OpenExeConfiguration(System.Reflection.Assembly.GetExecutingAssembly().Location);
+
         [TestInitialize]
         public void SetupTest()
         {
-            driver = new ChromeDriver();
+            string browserName = appConfig.AppSettings.Settings["browser"].Value;
+
+            try
+            {
+                switch (browserName)
+                {
+                    case "chrome":
+                        driver = new ChromeDriver();
+                        break;
+
+                    case "firefox":
+                        driver = new FirefoxDriver();
+                        break;
+
+                    case "edge":
+                        driver = new EdgeDriver();
+                        break;
+
+                    default:
+                        driver = new ChromeDriver();
+                        break;
+                }
+            }
+            catch (WebDriverException ex)
+            {
+                Console.WriteLine("Problem with browser installation " + browserName
+                    + ". Change property 'browser' in App.config. " + ex.Message);
+                throw;
+            }
+            
             homeUrl = "https://meteo.paraplan.net/en/";
             driver.Navigate().GoToUrl(homeUrl);
             driver.Manage().Window.Maximize();
@@ -54,8 +88,18 @@ namespace MeteoTests
         [TestCleanup]
         public void CleanupTest()
         {
-            driver.Close();
-            driver.Quit();
+            try
+            {
+                driver.Close();
+                driver.Quit();
+            }
+            catch (NullReferenceException ex)
+            {
+                Console.WriteLine("Problem with driver clean up"
+                    + ". Change property 'browser' in App.config. " 
+                    + ex.Message);
+                throw;
+            }
         }
 
         // check if element displayed
